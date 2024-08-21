@@ -1,8 +1,16 @@
 import CachePolicy from "http-cache-semantics";
 import { cacheResponse, getCachedResponse } from "./storage";
 
+/**
+ * Send a HTTP(s) request
+ *
+ * @param input A URL string or any other object with a stringifier — including a URL object type, or a Request object.
+ * @param init A structured value that contains settings for the fetch() request.
+ *
+ * @returns A promise that resolves to {@link Response} object.
+ */
 export async function cacheableFetch(
-  input: RequestInfo,
+  input: string | URL | Request,
   init?: RequestInit
 ): Promise<Response> {
   const request = input instanceof Request ? input : new Request(input, init);
