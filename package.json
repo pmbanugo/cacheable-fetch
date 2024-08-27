@@ -2,9 +2,14 @@
   "name": "@pmbanugo/cacheable-fetch",
   "module": "src/index.ts",
   "type": "module",
+  "scripts": {
+    "test": "bun test",
+    "test:watch": "bun test --watch"
+  },
   "devDependencies": {
     "@types/bun": "latest",
-    "@types/http-cache-semantics": "^4.0.4"
+    "@types/http-cache-semantics": "^4.0.4",
+    "elysia": "^1.1.7"
   },
   "peerDependencies": {
     "typescript": "^5.0.0"
