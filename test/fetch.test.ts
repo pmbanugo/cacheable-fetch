@@ -25,7 +25,7 @@ afterAll(async () => {
 });
 
 test("Non cacheable responses are not cached", async () => {
-  const url = `${BASE_URL}/no-store`;
+  const url = BASE_URL + PATH.NO_STORE;
   const firstResponse = await cacheableFetch(url).then((r) => r.text());
   const secondResponse = await cacheableFetch(url).then((r) => r.text());
 
@@ -34,7 +34,7 @@ test("Non cacheable responses are not cached", async () => {
 });
 
 test("Cacheable responses are cached", async () => {
-  const url = `${BASE_URL}/cache`;
+  const url = BASE_URL + PATH.CACHE;
   const firstResponse = await cacheableFetch(url).then((r) => r.text());
   await Bun.sleep(CACHESTORE_WAIT_TIME);
   const secondResponse = await cacheableFetch(url).then((r) => r.text());
@@ -44,7 +44,7 @@ test("Cacheable responses are cached", async () => {
 });
 
 test("Cacheable responses have unique cache key", async () => {
-  const url = `${BASE_URL}${PATH.CACHE}`;
+  const url = BASE_URL + PATH.CACHE;
   const firstResponse = await cacheableFetch(url + "?foo").then((r) =>
     r.text()
   );
@@ -71,6 +71,62 @@ test(`Cacheable responses for root path (i.e. /) are cached with same key`, asyn
   expect(firstResponse).toBe(secondResponse);
 });
 
+test("Stale cache entries with Last-Modified headers are revalidated", async () => {
+  const url = BASE_URL + PATH.LAST_MODIFIED;
+  const firstResponse = await cacheableFetch(url);
+  await Bun.sleep(CACHESTORE_WAIT_TIME);
+  const secondResponse = await cacheableFetch(url);
+
+  const cacheValue = LMDBDatabaseFactory.getInstance().get("GET:" + url);
+  expect(cacheValue).toBeDefined();
+  expect(cacheValue.policy.st).toBe(200);
+  expect(firstResponse.status).toBe(200);
+  expect(secondResponse.status).toBe(200);
+  const firstResponseText = await firstResponse.text();
+  expect(firstResponseText).toBe("last modified");
+  expect(firstResponseText).toBe(await secondResponse.text());
+});
+
+test("Stale cache entries with ETag headers are revalidated", async () => {
+  const url = BASE_URL + PATH.ETAG;
+  expect(LMDBDatabaseFactory.getInstance().get("GET:" + url)).toBeUndefined();
+  const firstResponse = await cacheableFetch(url);
+  await Bun.sleep(CACHESTORE_WAIT_TIME);
+  expect(LMDBDatabaseFactory.getInstance().get("GET:" + url)).toBeDefined();
+  const secondResponse = await cacheableFetch(url);
+  expect(firstResponse.status).toBe(200);
+  expect(secondResponse.status).toBe(200);
+  expect(await firstResponse.text()).toBe("etag");
+  expect(await secondResponse.text()).toBe("etag");
+});
+
+test(`Stale cache entries that can't be revalidate are deleted from cache`, async () => {
+  const url = BASE_URL + PATH.CACHE_THEN_NO_STORE;
+  const firstResponse = await cacheableFetch(url);
+  await Bun.sleep(CACHESTORE_WAIT_TIME);
+  const secondResponse = await cacheableFetch(url);
+
+  expect(firstResponse.status).toBe(200);
+  expect(secondResponse.status).toBe(200);
+  expect(firstResponse.headers.get("cache-control")).toBe("public, max-age=0");
+  expect(secondResponse.headers.get("cache-control")).toBe(
+    "public, no-cache, no-store"
+  );
+  expect(await firstResponse.text()).toBe("cache-then-no-store-on-revalidate");
+  expect(await secondResponse.text()).toBe("no-store");
+});
+
+test("Revalidated responses that are modified are passed through", async () => {
+  const url = BASE_URL + PATH.REVALIDATE_MODIFIED;
+  const firstResponse = await cacheableFetch(url);
+  await Bun.sleep(CACHESTORE_WAIT_TIME);
+  const secondResponse = await cacheableFetch(url);
+  expect(firstResponse.status).toBe(200);
+  expect(secondResponse.status).toBe(200);
+  expect(await firstResponse.text()).toBe("revalidate-modified");
+  expect(await secondResponse.text()).toBe("new-body");
+});
+
 test("checks status codes when comparing cache & response", async () => {
   const url = `${BASE_URL}${PATH.FIRST_ERROR}`;
   const firstResponse = await cacheableFetch(url).then((r) => r.text());
@@ -82,7 +138,7 @@ test("checks status codes when comparing cache & response", async () => {
 });
 
 test("saves compressed response", async () => {
-  const url = `${BASE_URL}/${PATH.COMPRESS}`;
+  const url = BASE_URL + PATH.COMPRESS;
   const firstResponse = await cacheableFetch(url);
   await Bun.sleep(CACHESTORE_WAIT_TIME);
   const secondResponse = await cacheableFetch(url);
