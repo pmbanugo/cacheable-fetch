@@ -49,7 +49,6 @@ export async function cacheResponse({
   try {
     const db = LMDBDatabaseFactory.getInstance();
     await db.put(key, {
-      timestamp: Date.now(),
       policy: policy,
       responseBody: response.body ? await response.arrayBuffer() : undefined,
     } satisfies CacheEntry);
@@ -59,12 +58,10 @@ export async function cacheResponse({
   }
 }
 
-export async function getCachedResponse(
-  key: string
-): Promise<CacheEntry | undefined> {
+export function getCachedResponse(key: string): CacheEntry | undefined {
   try {
     const db = LMDBDatabaseFactory.getInstance();
-    const cachedEntry = await db.get(key);
+    const cachedEntry = db.get(key);
     if (cachedEntry) {
       return cachedEntry;
     }
@@ -76,6 +73,4 @@ export async function getCachedResponse(
 type CacheEntry = {
   policy: CachePolicy.CachePolicyObject;
   responseBody?: ArrayBuffer; //TODO: consider switching to UInt8Array (gotten from response.byte() ) if it'll make any difference in performance.
-  //INFO: might not this this timestamp if CachePolicy already can provide it. e.g. CachePolicyObject.t
-  timestamp: number; //in milliseconds - when the response was cached
 };
