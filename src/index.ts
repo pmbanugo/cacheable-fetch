@@ -16,7 +16,7 @@ export async function cacheableFetch(
   const request = input instanceof Request ? input : new Request(input, init);
   const policyRequest = toCachePolicyRequest(request);
   const cacheKey = await generateCacheKey(request);
-  const cachedEntry = await getCachedResponse(cacheKey);
+  const cachedEntry = getCachedResponse(cacheKey);
 
   if (cachedEntry) {
     const cachedPolicy = CachePolicy.fromObject(cachedEntry.policy);
@@ -27,6 +27,36 @@ export async function cacheableFetch(
         headers: toHeaders(cachedPolicy.responseHeaders()),
       });
     }
+
+    const newRequestHeaders = cachedPolicy.revalidationHeaders(policyRequest);
+    const revalidationRequest = new Request(request, {
+      headers: toHeaders(newRequestHeaders),
+    });
+    const revalidatedResponse = await fetch(revalidationRequest);
+
+    const { policy, modified } = cachedPolicy.revalidatedPolicy(
+      toCachePolicyRequest(revalidationRequest),
+      toCachePolicyResponse(revalidatedResponse)
+    );
+
+    const newPolicyObject = policy.toObject();
+    cacheResponse({
+      key: cacheKey,
+      response: modified
+        ? revalidatedResponse.clone()
+        : new Response(cachedEntry.responseBody),
+      policy: newPolicyObject,
+    });
+
+    return modified
+      ? new Response(revalidatedResponse.body, {
+          status: revalidatedResponse.status,
+          headers: toHeaders(policy.responseHeaders()),
+        })
+      : new Response(cachedEntry.responseBody, {
+          status: newPolicyObject.st,
+          headers: toHeaders(policy.responseHeaders()),
+        });
   }
 
   const response = await fetch(request);
