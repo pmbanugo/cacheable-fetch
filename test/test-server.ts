@@ -135,7 +135,7 @@ export const server = new Elysia()
   })
   .get(
     PATH.ECHO,
-    ({ set, query, body, headers, path, request }) => {
+    ({ query, body, headers, path, request }) => {
       return {
         query,
         headers,
