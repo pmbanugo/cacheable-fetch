@@ -1,5 +1,6 @@
 {
   "name": "@pmbanugo/cacheable-fetch",
+  "author": "Peter Mbanugo (@pmbanugo)",
   "module": "src/index.ts",
   "type": "module",
   "scripts": {
@@ -7,12 +8,12 @@
     "test:watch": "bun test --watch"
   },
   "devDependencies": {
-    "@types/bun": "latest",
+    "@types/bun": "1.1.8",
     "@types/http-cache-semantics": "^4.0.4",
     "elysia": "^1.1.7"
   },
   "peerDependencies": {
-    "typescript": "^5.0.0"
+    "typescript": "^5.5.4"
   },
   "dependencies": {
     "http-cache-semantics": "^4.1.1",
